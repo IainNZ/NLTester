@@ -1,13 +1,14 @@
 # NLP?
 
-
-require("julp.jl")
-
+type Variable
+  name::String
+  col::Int
+end
 
 function ChainRule(expr,var)
   println("In ChainRule")
   println(expr)
-  if typeof(expr) == Julp.Variable
+  if typeof(expr) == Variable
     println("Variable")
     if expr == var
       println("Symbol==Var, so is just 1")
@@ -45,7 +46,7 @@ end
 function prepareExpression(expr)
   if typeof(expr) == Expr
     for i in 1:length(expr.args)
-      if typeof(expr.args[i]) == Julp.Variable
+      if typeof(expr.args[i]) == Variable
         expr.args[i] = :(__vals[$(expr.args[i].col)])
       elseif typeof(expr.args[i]) == Expr
         prepareExpression(expr.args[i])
@@ -68,9 +69,11 @@ end
 
 function doStuff()
 
-  m = Julp.Model("min")
-  x = Julp.Variable(m,"x",-Inf,Inf)
-  y = Julp.Variable(m,"y",-Inf,Inf)
+  #m = Julp.Model("min")
+  #x = Variable(m,"x",-Inf,Inf)
+  #y = Variable(m,"y",-Inf,Inf)
+  x = Variable("x",1)
+  y = Variable("y",2)
 
   con = :($x^4 + $x^2 <= 4)
 
@@ -85,6 +88,7 @@ function doStuff()
   
   out = ChainRule(lhs,x)
   println(out)
+  
   println("Rosenbrockin it")
   rosenbrock = :( (1-$x)^2 + 100($y-$x^2)^2 )
   dx = ChainRule(rosenbrock, x)
