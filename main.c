@@ -1,3 +1,4 @@
+//gcc main.c amplsolver.a -o nltest -ldl -lm^C
 #include "../AMPLInterface/asl.h"
 
 int main(int argc, char **argv)
