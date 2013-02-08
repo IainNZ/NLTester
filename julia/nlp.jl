@@ -81,8 +81,10 @@ function chainRule(ex::Expr,wrt::Variable)
                 push!(termdiffs, x)
             end
         end
-        # we could simplify the expression more
-        if (term1 == 0 && length(termdiffs) == 2)
+        if term1 != 0 && length(termdiffs) == 2 && length(ex.args) >= 3
+            # if all of the terms but the first disappeared, we just return the first
+            return term1
+        elseif (term1 == 0 && length(termdiffs) == 2)
             return 0
         else
             return expr(:call,termdiffs)
