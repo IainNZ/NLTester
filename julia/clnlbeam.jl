@@ -45,6 +45,20 @@ function Test()
     #	x[i+1] - x[i] - 0.5*h*(sin(t[i+1]) + sin(t[i]))= 0;
     #subject to cons2{i in 0..ni-1}:
     #	t[i+1] - t[i] - 0.5*h*u[i+1] - 0.5*h*u[i] = 0;
+
+    println("Evaluating jacobian")
+    nvar = m.numCols
+    ncons = length(cons)
+
+    xval::Vector{Float64} = ones(m.numCols)
+    nzval = @time elts(xval)
+    nzval = @time elts(xval)
+    for row in 1:ncons
+        #print("Row $row: ")
+        #println(join([@sprintf("%.9f*X%d", nzval[r], colval[r]) for r in rowstarts[row]:(rowstarts[row+1]-1)]," + "))
+    end
+
+    #@time for k in 1:1000; elts(xval); end
 end
 
 Test()

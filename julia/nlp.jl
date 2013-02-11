@@ -236,13 +236,13 @@ function sparseJacobian(m,constr)
                 push!(colval,i)
             end
         end
-        push!(rowstart,length(arr))
+        push!(rowstart,length(colval)+1)
     end
 
     println("chain rule time: $t1")
     println("prepare expression time: $t2")
     
-    println("Calling compiler with $(length(arr)-1) non-zero elements")
+    println("Calling compiler with $(length(colval)) non-zero elements")
 
     t = time()
     v = compileExprVec(arr)
