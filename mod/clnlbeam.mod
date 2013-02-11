@@ -22,6 +22,8 @@ param ni := 500;
 param alpha := 350.0;
 param h := 1/ni;
 
+option presolve 0;
+
 var t{i in 0..ni} >= -1.0, <= 1.0, := 0.05*cos(i*h);
 var x{i in 0..ni} >= -0.05, <= 0.05, := 0.05*cos(i*h);
 var u{0..ni};
@@ -33,9 +35,9 @@ subject to cons1{i in 0..ni-1}:
 subject to cons2{i in 0..ni-1}:
 	t[i+1] - t[i] - 0.5*h*u[i+1] - 0.5*h*u[i] = 0;
 
-fix x[0] := 0.0;
-fix x[ni] := 0.0;
-fix t[0] := 0.0;
-fix t[ni] := 0.0;
+#fix x[0] := 0.0;
+#fix x[ni] := 0.0;
+#fix t[0] := 0.0;
+#fix t[ni] := 0.0;
 
 write gclnlbeam;
