@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 	char *bname = basename(argv[1]);
 	// Initialization time, 100 jacobian evaluations
 	printf("### %s %f %f\n",bname,t0,t1);
-	printf("## %s Jacobian norm: %.7g (nnz = %d)\n",bname,norm,nzc);
+	printf("## %s Jacobian norm: %.10g (nnz = %d)\n",bname,norm,nzc);
 
 
 	

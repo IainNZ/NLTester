@@ -266,7 +266,7 @@ function sparseJacobian(m,constr)
             t = time()
             x = chainRule(constr[r],Variable(m,i))
             t1 += time() - t
-
+            
             if x == 0
                 continue
             end
