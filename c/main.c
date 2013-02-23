@@ -37,10 +37,13 @@ int main(int argc, char **argv)
 		printf("Usage: %s stub\n", argv[0]);
 		return 1;
 	}
-
+	
+	double t0 = clock_now();
 	asl = ASL_alloc(ASL_read_fg);
 	stub = argv[1];
 	nl = jac0dim(stub, (fint)strlen(stub));
+	t0 = clock_now() - t0;
+
 	
 	J = (real *)Malloc(nzc*sizeof(real));
 	
@@ -52,18 +55,27 @@ int main(int argc, char **argv)
 
 	for (i = 0; i < nvar; i++) X[i] = 1.0;
 	
-	objVal = objval(0, X, &nerror);
-	printf("Objective %.5f\n", objVal);
+	//objVal = objval(0, X, &nerror);
+	//printf("Objective %.5f\n", objVal);
 	
-	double t = clock_now();
-	
-	for (k = 0; k < 1000; k++) {
+	double t1 = clock_now();
+	for (k = 0; k < 100; k++) {
 		jacval(X, J, &nerror);
 	}
+	t1 = clock_now() - t1;
 
-	t = clock_now() - t;
+	double norm = 0;
+	for (i = 0; i < nzc; i++) {
+		norm += J[i]*J[i];
+	}
+	norm = sqrt(norm);
 
-	printf("Jacobian evaluation time: %f sec\n",t);
+
+	char *bname = basename(argv[1]);
+	// Initialization time, 100 jacobian evaluations
+	printf("### %s %f %f\n",bname,t0,t1);
+	printf("## %s Jacobian norm: %.7g (nnz = %d)\n",bname,norm,nzc);
+
 
 	
 	/*printf("nzc %d\n",nzc);

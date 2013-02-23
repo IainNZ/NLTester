@@ -29,6 +29,25 @@ macro nlexpr(x)
     return esc(processExpr(x))
 end
 
+findVariablesInner(x::Variable) = [x.col]
+findVariablesInner(x::Symbol) = []
+findVariablesInner(x::Number) = []
+# this is too slow
+#findVariablesInner(x::Expr) = vcat([findVariablesInner(a) for a in x.args]...)
+function findVariablesInner(x::Expr)
+    out = Array(Int,0)
+    for a in x.args
+        for b in findVariablesInner(a)
+            push!(out,b)
+        end
+    end
+    return out
+end
+# return a list of variables in the given expression
+# (short code but not currently the most efficient)
+findVariables(x::Expr) = sort(unique(findVariablesInner(x)))
+    
+
 function chainRule(ex::Variable,wrt::Variable)
     if ex.col == wrt.col
         return 1
@@ -44,7 +63,7 @@ function chainRule(ex::Expr,wrt::Variable)
         error("Unrecognized expression $ex")
     end
     if ex.args[1] == :^
-    #    println("^ operator, diff it")
+        #println("^ operator, diff it")
         x = chainRule(ex.args[2],wrt)
         if x != 0
             return :( $(ex.args[3]) * $(x) * ($(ex.args[2]) ^ ($(ex.args[3] - 1))) )
@@ -127,6 +146,177 @@ function chainRule(ex::Expr,wrt::Variable)
     
     error("Unrecognized function $(ex.args[1])")
 end
+
+
+
+
+# new approach: keep a list of expressions that we've seen and identify
+# which are identical up to a difference in variable indices
+
+
+type Placeholder
+    idx::Int
+end
+
+#expressionEqual(x::Expr,y::Expr) = x.head == y.head && length(x.args) == length(y.args) && 
+#    all([expressionEqual(a,b) for (a,b) in zip(x.args,y.args)])
+function expressionEqual(x::Expr,y::Expr)
+    if x.head != y.head || length(x.args) != length(y.args)
+        return false
+    else
+        for i in 1:length(x.args)
+            if !expressionEqual(x.args[i],y.args[i])
+                return false
+            end
+        end
+        return true
+    end
+end
+
+expressionEqual(x::Variable,y::Placeholder) = true
+expressionEqual(x::Any,y::Any) = x == y
+
+
+
+
+function canonicalizeExpression(ex::Variable,seen::Dict{Int,Int})
+    idx = get(seen,ex.col,0)
+    if idx != 0
+        return Placeholder(idx)
+    else
+        seen[ex.col] = length(seen)+1
+        return Placeholder(length(seen))
+    end
+end
+
+canonicalizeExpression(ex::Symbol,seen) = ex
+canonicalizeExpression(ex::Number,seen) = ex
+canonicalizeExpression(ex::Expr,seen) = expr(ex.head,{canonicalizeExpression(y,seen) for y in ex.args})
+canonicalizeExpression(ex) = (d = Dict{Int,Int}(); (canonicalizeExpression(ex,d),length(d)))
+
+
+
+# given Expr y with placeholders, generate map from placeholder indices to variable indices
+# (assumes expressions are equal)
+
+placeholderMap(x,y,numPlaceholder::Int) = (a = zeros(Int,numPlaceholder); placeholderMap2(x,y,a); a)
+placeholderMap2(x::Expr,y::Expr,map) = for i in 1:length(x.args)
+    placeholderMap2(x.args[i],y.args[i],map) 
+end
+
+function placeholderMap2(x::Variable,y::Placeholder,map::Vector{Int})
+    if map[y.idx] == 0
+        map[y.idx] = x.col
+    else
+        @assert map[y.idx] == x.col
+    end
+    return
+end
+placeholderMap2(x::Any,y::Any,map) = nothing
+
+
+preparePlaceholderExpression(ex::Placeholder,t) = :(__vals[placeholderMaps[$t][i][$(ex.idx)]])
+preparePlaceholderExpression(ex::Symbol,t) = ex
+preparePlaceholderExpression(ex::Number,t) = ex
+preparePlaceholderExpression(ex::Expr,t) = expr(ex.head,{preparePlaceholderExpression(y,t) for y in ex.args})
+
+
+# exprTemplate : list of canonicalized expressions
+# exprsByTemplate : output indices corresponding to each template
+# placeholderMaps : corresponding placeholder maps
+function compileExprVec(exprTemplates::Vector, exprsByTemplate::Vector{Vector{Int}}, 
+    placeholderMaps::Vector{Vector{Vector{Int}}}, nnz)
+    #fexpr = :( (__vals,out,exprsByTemplate,placeholderMaps) -> begin end )
+    fexpr = :( (__vals::Vector{Float64},out::Vector{Float64},exprsByTemplate::Vector{Vector{Int}},placeholderMaps::Vector{Vector{Vector{Int}}}) -> begin end )
+    for t in 1:length(exprTemplates)
+        #println(exprTemplates[t])
+        ex = preparePlaceholderExpression(exprTemplates[t],t)
+        #println(ex)
+        loop = :(
+            for i in 1:length(exprsByTemplate[$t])
+                out[exprsByTemplate[$t][i]] = $ex
+            end)
+        push!(fexpr.args[2].args[2].args,loop)
+    end
+    #push!(fexpr.args[2].args[2].args,:(return out))
+    #println(fexpr)
+    f = eval(fexpr)
+    return (__vals,out) -> f(__vals,out,exprsByTemplate,placeholderMaps)
+end
+
+
+function sparseJacobian(m,constr)
+
+    arr = {:Float64}
+    colval = Array(Int,0)
+    rowstart = [1]
+
+    exprTemplates = {}
+    numPlaceholders = Int[]
+    exprsByTemplate = Array(Vector{Int},0)
+    placeholderMaps = Array(Vector{Vector{Int}},0)
+    nnz = 0
+    
+    t1 = 0.
+    t2 = 0.
+
+    for r in 1:length(constr)
+        #for i in 1:m.numCols
+        for i in findVariables(constr[r])
+            t = time()
+            x = chainRule(constr[r],Variable(m,i))
+            t1 += time() - t
+
+            if x == 0
+                continue
+            end
+            
+            push!(colval,i)
+
+            t = time()
+            found = false
+            for k in 1:length(exprTemplates)
+                y = exprTemplates[k]
+                idx = k
+                if expressionEqual(x,y)
+                    found = true
+                    break
+                end
+            end
+            if !found
+                y,np = canonicalizeExpression(x)
+                push!(exprTemplates,y)
+                push!(numPlaceholders,np)
+                push!(exprsByTemplate,Array(Int,0))
+                push!(placeholderMaps,Array(Vector{Int},0))
+                idx = length(exprTemplates)
+            end
+            push!(exprsByTemplate[idx],length(colval))
+            placemap = placeholderMap(x,y,numPlaceholders[idx]) 
+            push!(placeholderMaps[idx],placemap)
+            @assert !contains(placemap,0)
+
+            t2 += time() - t
+
+        end
+        push!(rowstart,length(colval)+1)
+    end
+    println("$(length(exprTemplates)) unique expressions")
+
+    println("chain rule time: $t1")
+    println("expressionEqual time: $t2")
+    
+    t = time()
+    v = compileExprVec(exprTemplates,exprsByTemplate,placeholderMaps,length(colval))
+    t3 = time() - t
+    println("compile time: $t3")
+    return v, colval, rowstart
+
+            
+end
+
+
+## Old stuff:
 
 prepareExpression(ex::Variable) = :(__vals[$(ex.col)])
 prepareExpression(ex::Symbol) = ex
@@ -212,7 +402,7 @@ function sparseGradVec(m,ex)
 
 end
 
-function sparseJacobian(m,constr)
+function sparseJacobianOld(m,constr)
 
     arr = {:Float64}
     colval = Array(Int,0)
@@ -222,7 +412,9 @@ function sparseJacobian(m,constr)
     t2 = 0.
 
     for r in 1:length(constr)
-        for i in 1:m.numCols
+        #println("$r")
+        #for i in 1:m.numCols
+        for i in findVariables(constr[r])
             t = time()
             x = chainRule(constr[r],Variable(m,i))
             t1 += time() - t
