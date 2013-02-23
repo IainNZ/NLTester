@@ -5,7 +5,7 @@
    sh configurehere
    make
 
-   gcc main.c solvers/amplsolver.a -o nltest -ldl -lm 
+   gcc -O2 main.c solvers/amplsolver.a -o nltest -ldl -lm 
 
 */
 #include "solvers/asl.h"
