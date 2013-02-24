@@ -74,7 +74,7 @@ instances = [:clnlbeam, :cont5_1]
 
 
 function dobench()
-    N = 99
+    N = 100
 
     modeltime = Float64[]
     prepjacobian = Float64[]
@@ -105,7 +105,7 @@ function dobench()
         end
         push!(nextN,time()-t)
         
-        println("### $(string(i)) $(modeltime[end]) $(prepjacobian[end]) $(firsteval[end]) $(nextN[end])")
+        println("### $(string(i)) $(modeltime[end]) $(prepjacobian[end]) $(firsteval[end]) $(nextN[end]/N)")
 
         println("## $(string(i)) Jacobian norm: $(norm(nzval,2)) (nnz = $(length(nzval)))")
     end

@@ -42,12 +42,12 @@ int main(int argc, char **argv)
 	asl = ASL_alloc(ASL_read_fg);
 	stub = argv[1];
 	nl = jac0dim(stub, (fint)strlen(stub));
+	fg_read(nl,0);
 	t0 = clock_now() - t0;
 
 	
 	J = (real *)Malloc(nzc*sizeof(real));
 	
-	fg_read(nl,0);
 
 	int nvar = n_var;
 
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 
 	char *bname = basename(argv[1]);
 	// Initialization time, 100 jacobian evaluations
-	printf("### %s %f %f\n",bname,t0,t1);
+	printf("### %s %f %g\n",bname,t0,t1/100);
 	printf("## %s Jacobian norm: %.10g (nnz = %d)\n",bname,norm,nzc);
 
 
