@@ -68,7 +68,7 @@ function cont5_1()
 end
 
 
-instances = [:clnlbeam, :cont5_1]
+instances = [:clnlbeam, :clnlbeam, :cont5_1]
 #instances = [:cont5_1]
 #instances = [:clnlbeam]
 
