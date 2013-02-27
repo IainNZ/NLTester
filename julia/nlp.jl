@@ -1,12 +1,16 @@
-function processExpr(x)
-    if !isa(x,Expr)
-        return x
-    elseif x.head == :curly && x.args[1] == :sum
+
+type NLExpr
+    ex::Any
+    exhash::Uint
+    exvars::Vector{Int} # list of variables in the expression as they appear (duplicates possible)
+end
+
+function processExpr(x::Expr)
+    if x.head == :curly && x.args[1] == :sum
         # transform sum syntax into an explicit call to (+)
-        # we generate code that calls the same macro
         # score one for recursion
         arr = gensym()
-        code = :(push!($arr,@nlexpr($(x.args[2]))))
+        code = :(push!($arr,$(processExpr(x.args[2]))))
         for level in length(x.args):-1:3
             code = expr(:for, {x.args[level],code})
             # for $(x.args[level]) $code end
@@ -25,8 +29,38 @@ function processExpr(x)
     end
 end
 
+processExpr(x::Any) = x
+
+addToVarList(x::Variable,l) = push!(l,x.col)
+addToVarList(x::Any,l) = nothing
+
+# generate code that generates the list of variables in an expression
+function genVarList(x::Expr, arrname)
+    if x.head == :curly && x.args[1] == :sum
+        code = genVarList(x.args[2],arrname)
+        for level in length(x.args):-1:3
+            code = expr(:for, {x.args[level],code})
+        end
+        return code
+    elseif x.head == :call
+        return expr(:block,{ genVarList(y,arrname) for y in x.args[2:end] })
+    else
+        return :(addToVarList($x,$arrname))
+    end
+end
+
+genVarList(x::Number,arrname) = nothing
+genVarList(x::Symbol,arrname) = :(addToVarList($x,$arrname))
+
+
 macro nlexpr(x)
-    return esc(processExpr(x))
+    exvars = gensym()
+    varcode = quote
+        $exvars = Int[]
+        $(genVarList(x,exvars))
+        $exvars
+    end
+    return :(NLExpr($(esc(processExpr(x))),$(hash(x)), $(esc(varcode))))
 end  
 
 type Placeholder
@@ -136,58 +170,34 @@ end
 # which are identical up to a difference in variable indices
 
 
-
-
-
-function canonicalizeExpression(ex::Variable,seen::Dict{Int,Int})
-    idx = get(seen,ex.col,0)
-    if idx != 0
-        return Placeholder(idx)
-    else
-        seen[ex.col] = length(seen)+1
-        return Placeholder(length(seen))
-    end
+function canonicalizeExpression(ex::Variable,niceidx,nseen)
+    return Placeholder(niceidx[nseen.idx += 1])
 end
 
-canonicalizeExpression(ex::Symbol,seen) = ex
-canonicalizeExpression(ex::Number,seen) = ex
-canonicalizeExpression(ex::Expr,seen) = expr(ex.head,{canonicalizeExpression(y,seen) for y in ex.args})
-canonicalizeExpression(ex) = (d = Dict{Int,Int}(); (canonicalizeExpression(ex,d),length(d)))
+canonicalizeExpression(ex::Symbol,niceidx,nseen) = ex
+canonicalizeExpression(ex::Number,niceidx,nseen) = ex
+canonicalizeExpression(ex::Expr,niceidx,nseen) = expr(ex.head,{canonicalizeExpression(y,niceidx,nseen) for y in ex.args})
+canonicalizeExpression(ex,niceidx) = (nseen = Placeholder(0); canonicalizeExpression(ex,niceidx,nseen))
 
 
-
-
-# combination of expressionEqual and placeholderMap
-# check if Expr y with placeholders is equal to expression x *and* has the same variable pattern
-function expressionPatternEqual(x,y,numPlaceholder::Int) 
-    a = zeros(Int,numPlaceholder)
-    return expressionPatternEqual2(x,y,a), a
-end
-
-function expressionPatternEqual2(x::Expr,y::Expr,map)
-    if x.head != y.head || length(x.args) != length(y.args)
-        return false
-    else
-        for i in 1:length(x.args)
-            if !expressionPatternEqual2(x.args[i],y.args[i],map)
-                return false
-            end
+# make indices nice, preserving equality
+# e.g. [3, 10, 100, 3, 2 ] -> [ 1, 2, 3, 1, 4 ]
+function canonicalizeArray{T}(vec::Vector{T}) 
+    seen = Dict{T,Int}()
+    out = Array(T,length(vec))
+    reversemap = T[]
+    for i in 1:length(vec)
+        idx = get(seen,vec[i],0)
+        if idx != 0
+            out[i] = idx
+        else
+            seen[vec[i]] = length(seen)+1
+            out[i] = length(seen)
+            push!(reversemap,vec[i])
         end
-        return true
     end
+    return out, reversemap, length(seen)
 end
-
-function expressionPatternEqual2(x::Variable,y::Placeholder,map::Vector{Int})
-    if map[y.idx] == 0 # haven't seen this placeholder yet
-        map[y.idx] = x.col
-    elseif map[y.idx] != x.col
-        # already saw this placeholder but it was matched to a different variable
-        return false
-    end
-    return true
-end
-
-expressionPatternEqual2(x::Any,y::Any,map) = x == y
 
 
 preparePlaceholderExpression(ex::Placeholder,t) = :(__vals[placeholderMaps[$t][i][$(ex.idx)]])
@@ -197,13 +207,13 @@ preparePlaceholderExpression(ex::Expr,t) = expr(ex.head,{preparePlaceholderExpre
 
 
 
-function sparseJacobian(m,constr)
+function sparseJacobian(m,constr::Vector{NLExpr})
 
     arr = {:Float64}
     colval = Array(Int,0)
     rowstart = [1]
 
-    origExprTemplates = {}
+    origExprTemplates = NLExpr[]
     derivExprTemplates = Array(Vector{Any},0)
     numPlaceholders = Int[]
     # for each derivarive template, the nonzero elements it corresponds to
@@ -215,26 +225,46 @@ function sparseJacobian(m,constr)
     t2 = 0.
     t3 = 0.
 
+
     for r in 1:length(constr)
+        con = constr[r]
+        #println(con.ex,con.exvars)
         # check if we've seen this expression before, modulo variable indices
         t = time()
         found = false
-        for k in 1:length(origExprTemplates)
+        for k in length(origExprTemplates):-1:1
             y = origExprTemplates[k]
-            idx = k
-            eq, placemap = expressionPatternEqual(constr[r],y,numPlaceholders[k])
-            if eq
-                @assert !contains(placemap,0)
-                found = true
-                break
+            if y.exhash == con.exhash
+                # check that pattern of variables match, i.e. 1-1 correspondence between expressions
+                templatevars = y.exvars
+                convars = con.exvars
+                @assert length(convars) == length(templatevars)
+                matcharr = zeros(Int,numPlaceholders[k])
+                nmatch = 0
+                ismatch = true
+                # map from placeholder index to variables in this constraint
+                for i in 1:length(convars)
+                    if matcharr[templatevars[i]] == 0
+                        matcharr[templatevars[i]] = convars[i]
+                        nmatch += 1
+                    elseif matcharr[templatevars[i]] != convars[i]
+                        # no match
+                        ismatch = false
+                        break
+                    end
+                end
+                if ismatch && nmatch == numPlaceholders[k]
+                    idx = k
+                    found = true
+                    break
+                end
             end
         end
         t2 += time() - t
-
         t = time()
         if !found
-            origTemplate,np = canonicalizeExpression(constr[r])
-            eq, placemap = expressionPatternEqual(constr[r],origTemplate,np)
+            templatevars,matcharr,np = canonicalizeArray(con.exvars)
+            origTemplate = NLExpr(canonicalizeExpression(con.ex,templatevars),con.exhash,templatevars)
             push!(origExprTemplates,origTemplate)
             push!(numPlaceholders,np)
             push!(exprsByDerivTemplate,Array(Vector{Int},np))
@@ -243,19 +273,19 @@ function sparseJacobian(m,constr)
                 exprsByDerivTemplate[end][i] = Array(Int,0)
             end
             push!(placeholderMaps,Array(Vector{Int},0))
-            # differentiate wrt each variable present
-            push!(derivExprTemplates,{ chainRule(origTemplate,Placeholder(i)) for i in 1:np })
+            # differentiate wrt each unique variable present
+            push!(derivExprTemplates,{ chainRule(origTemplate.ex,Placeholder(i)) for i in 1:np })
             idx = length(origExprTemplates)
         end
         t1 += time() - t
 
         t = time()
         # fill in row (in correct variable order)
-        for i in sortperm(placemap)
-            push!(colval,placemap[i])
-            push!(placeholderMaps[idx],placemap)
+        for i in sortperm(matcharr)
+            push!(colval,matcharr[i])
             push!(exprsByDerivTemplate[idx][i],length(colval))
         end
+        push!(placeholderMaps[idx],matcharr)
         t3 += time() - t
         push!(rowstart,length(colval)+1)
     end

@@ -14,7 +14,7 @@ function clnlbeam()
     @defVar(m, -0.05 <= x[1:(ni+1)] <= 0.05)
     @defVar(m, u[1:(ni+1)])
 
-    cons = Array(Expr,0)
+    cons = Array(NLExpr,0)
     # cons1
     for i in 1:ni
         push!(cons, @nlexpr x[i+1] - x[i] - halfH*(sin(t[i+1])+sin(t[i])))
@@ -45,7 +45,7 @@ function cont5_1()
     @defVar(model, -10 <= y[1:(m+1),1:(n+1)] <= 10)
     @defVar(model, 0 <= u[1:m] <= 1)
 
-    cons = Array(Expr,0)
+    cons = Array(NLExpr,0)
     # pde
     for i in 0:(m-1), j in 1:(n-1)
         push!(cons, @nlexpr dtinv*(y[i+2,j+1] - y[i+1,j+1]) - 
@@ -68,7 +68,7 @@ function cont5_1()
 end
 
 
-instances = [:clnlbeam, :clnlbeam, :cont5_1]
+instances = [:clnlbeam, :clnlbeam, :cont5_1, :cont5_1]
 #instances = [:cont5_1]
 #instances = [:clnlbeam]
 
@@ -104,6 +104,11 @@ function dobench()
             elts(xval,nzval)
         end
         push!(nextN,time()-t)
+
+        #for row in 1:length(cons)
+        #    print("Row $row: ")
+        #    println(join([@sprintf("%.9f*X%d", nzval[r], colval[r]) for r in rowstarts[row]:(rowstarts[row+1]-1)]," + "))
+        #end
         
         println("### $(string(i)) $(modeltime[end]) $(prepjacobian[end]) $(firsteval[end]) $(nextN[end]/N)")
 
