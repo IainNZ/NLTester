@@ -184,7 +184,7 @@ canonicalizeExpression(ex,niceidx) = (nseen = Placeholder(0); canonicalizeExpres
 # e.g. [3, 10, 100, 3, 2 ] -> [ 1, 2, 3, 1, 4 ]
 function canonicalizeArray{T}(vec::Vector{T}) 
     seen = Dict{T,Int}()
-    out = Array(T,length(vec))
+    out = Array(Int,length(vec))
     reversemap = T[]
     for i in 1:length(vec)
         idx = get(seen,vec[i],0)
