@@ -116,40 +116,6 @@ function dobench()
     end
 end
 
-function dobenchOld()
-    N = 100
-
-    modeltime = Float64[]
-    prepjacobian = Float64[]
-    firsteval = Float64[]
-    nextN = Float64[]
-    for i in instances
-        f = eval(i)
-
-        t = time()
-        m,cons = f()
-        push!(modeltime,time()-t)
-
-        t = time()
-        elts, colval, rowstarts = @time sparseJacobianOld(m,cons)
-        push!(prepjacobian,time()-t)
-
-        xval = ones(m.numCols)
-        
-        t = time()
-        nzval = elts(xval)
-        push!(firsteval,time()-t)
-
-        t = time()
-        for k in 1:N
-            nzval = elts(xval)
-        end
-        push!(nextN,time()-t)
-        
-        println("### $(string(i)) $(modeltime[end]) $(prepjacobian[end]) $(firsteval[end]) $(nextN[end])")
-    end
-end
-
 dobench()
         
 
