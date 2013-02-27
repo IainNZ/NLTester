@@ -8,6 +8,7 @@
    gcc -O2 main.c solvers/amplsolver.a -o nltest -ldl -lm 
 
 */
+//   bash -c 'for p in ../mod/*0.nl; do for k in `seq 1 3`; do ./nltest $p | grep "###"; done done'
 #include "solvers/asl.h"
 #include <sys/time.h>
 
@@ -58,11 +59,13 @@ int main(int argc, char **argv)
 	//objVal = objval(0, X, &nerror);
 	//printf("Objective %.5f\n", objVal);
 	
-	double t1 = clock_now();
-	for (k = 0; k < 100; k++) {
+	double jactime = 1e30;
+	for (k = 0; k < 10; k++) {
+		double t1 = clock_now();
 		jacval(X, J, &nerror);
+		t1 = clock_now() - t1;
+		jactime = (t1 < jactime) ? t1 : jactime;
 	}
-	t1 = clock_now() - t1;
 
 	double norm = 0;
 	for (i = 0; i < nzc; i++) {
@@ -73,7 +76,7 @@ int main(int argc, char **argv)
 
 	char *bname = basename(argv[1]);
 	// Initialization time, 100 jacobian evaluations
-	printf("### %s %f %g\n",bname,t0,t1/100);
+	printf("### %s %f %g\n",bname,t0,jactime);
 	printf("## %s Jacobian norm: %.10g (nnz = %d)\n",bname,norm,nzc);
 
 

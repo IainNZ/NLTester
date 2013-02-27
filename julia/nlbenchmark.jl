@@ -68,7 +68,7 @@ function cont5_1(N)
 end
 
 
-instances = [(:clnlbeam,500),
+instances = [
     (:clnlbeam,5000),(:clnlbeam,50000),
     (:clnlbeam,500000),
     (:cont5_1,200),(:cont5_1,400),(:cont5_1,1000)]
@@ -77,8 +77,7 @@ instances = [(:clnlbeam,500),
 
 
 function dobench()
-    Reps = 100
-
+    
     modeltime = Float64[]
     prepjacobian = Float64[]
     firsteval = Float64[]
@@ -87,13 +86,23 @@ function dobench()
         gc_disable()
         f = eval(i)
 
-        t = time()
-        m,cons = f(N)
-        push!(modeltime,time()-t)
+        modelt = Inf
+        local m,cons
+        for k in 1:3
+            t = time()
+            m,cons = f(N)
+            modelt = min(time()-t,modelt)
+        end
+        push!(modeltime,modelt)
 
-        t = time()
-        elts, colval, rowstarts = sparseJacobian(m,cons)
-        push!(prepjacobian,time()-t)
+        preptime = Inf
+        local elts, colval, rowstarts
+        for k in 1:3
+            t = time()
+            elts, colval, rowstarts = sparseJacobian(m,cons)
+            preptime = min(time()-t,preptime)
+        end
+        push!(prepjacobian,preptime)
 
         xval = ones(m.numCols)
         
@@ -103,18 +112,20 @@ function dobench()
         elts(xval,nzval)
         push!(firsteval,time()-t)
 
-        t = time()
-        for k in 1:Reps
+        evaltime = Inf
+        for k in 1:30
+            t = time()
             elts(xval,nzval)
+            evaltime = min(time()-t,evaltime)
         end
-        push!(nextN,time()-t)
+        push!(nextN,evaltime)
 
         #for row in 1:length(cons)
         #    print("Row $row: ")
         #    println(join([@sprintf("%.9f*X%d", nzval[r], colval[r]) for r in rowstarts[row]:(rowstarts[row+1]-1)]," + "))
         #end
-        
-        println("### $(string(i)), N = $N $(modeltime[end]) $(prepjacobian[end]) $(firsteval[end]) $(nextN[end]/N)")
+
+        @printf "### %s, N=%d %.6f %.6f %.6f %.6f\n" string(i) N modeltime[end] prepjacobian[end] firsteval[end] nextN[end]
         println("## $(string(i)), N = $N Problem has $(m.numCols) variables, $(length(cons)) constraints, and $(length(nzval)) non-zero elements")
         println("## $(string(i)), N = $N Jacobian norm: $(norm(nzval,2)) (nnz = $(length(nzval)))")
         gc_enable()

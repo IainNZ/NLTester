@@ -289,11 +289,11 @@ function sparseJacobian(m,constr::Vector{NLExpr})
         t3 += time() - t
         push!(rowstart,length(colval)+1)
     end
-    println("$(length(origExprTemplates)) unique expressions")
+    #println("$(length(origExprTemplates)) unique expressions")
 
-    println("chain rule time: $t1")
-    println("expression pattern match: $t2")
-    println("sortperm+ time: $t3")
+    #println("chain rule time: $t1")
+    #println("expression pattern match: $t2")
+    #println("sortperm+ time: $t3")
     
     t3 = time()
     fexpr = :( (__vals::Vector{Float64},out::Vector{Float64},exprsByDerivTemplate::Vector{Vector{Vector{Int}}},placeholderMaps::Vector{Vector{Vector{Int}}}) -> begin end )
@@ -312,7 +312,7 @@ function sparseJacobian(m,constr::Vector{NLExpr})
     f = eval(fexpr)
     v = (__vals,out) -> f(__vals,out,exprsByDerivTemplate,placeholderMaps)
     t3 = time() - t3
-    println("compile time: $t3")
+    #println("compile time: $t3")
     return v, colval, rowstart
 
             
