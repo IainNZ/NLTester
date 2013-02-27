@@ -2,8 +2,8 @@ using MathProg
 
 require("nlp.jl")
 
-function clnlbeam()
-    ni    = 500
+function clnlbeam(N)
+    ni    = N
     alpha = 350
     h     = 1/ni
     halfH = h/2
@@ -28,8 +28,8 @@ function clnlbeam()
 
 end
 
-function cont5_1()
-    n = 200
+function cont5_1(N)
+    n = N
     m = n 
     T = 1
     dt = T/m
@@ -68,7 +68,7 @@ function cont5_1()
 end
 
 
-instances = [:clnlbeam, :clnlbeam, :cont5_1, :cont5_1]
+instances = [(:clnlbeam,500), (:clnlbeam,500), (:cont5_1,200), (:cont5_1,200)]
 #instances = [:cont5_1]
 #instances = [:clnlbeam]
 
@@ -80,11 +80,11 @@ function dobench()
     prepjacobian = Float64[]
     firsteval = Float64[]
     nextN = Float64[]
-    for i in instances
+    for (i,N) in instances
         f = eval(i)
 
         t = time()
-        m,cons = f()
+        m,cons = f(N)
         push!(modeltime,time()-t)
 
         t = time()
@@ -110,9 +110,9 @@ function dobench()
         #    println(join([@sprintf("%.9f*X%d", nzval[r], colval[r]) for r in rowstarts[row]:(rowstarts[row+1]-1)]," + "))
         #end
         
-        println("### $(string(i)) $(modeltime[end]) $(prepjacobian[end]) $(firsteval[end]) $(nextN[end]/N)")
-
-        println("## $(string(i)) Jacobian norm: $(norm(nzval,2)) (nnz = $(length(nzval)))")
+        println("### $(string(i)), N = $N $(modeltime[end]) $(prepjacobian[end]) $(firsteval[end]) $(nextN[end]/N)")
+        println("## $(string(i)), N = $N Problem has $(m.numCols) variables, $(length(cons)) constraints, and $(length(nzval)) non-zero elements")
+        println("## $(string(i)), N = $N Jacobian norm: $(norm(nzval,2)) (nnz = $(length(nzval)))")
     end
 end
 
