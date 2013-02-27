@@ -40,4 +40,4 @@ subject to cons2{i in 0..ni-1}:
 #fix t[0] := 0.0;
 #fix t[ni] := 0.0;
 
-write gclnlbeam;
+write gclnlbeam-50000;

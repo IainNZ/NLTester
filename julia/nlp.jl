@@ -292,7 +292,7 @@ function sparseJacobian(m,constr::Vector{NLExpr})
     println("$(length(origExprTemplates)) unique expressions")
 
     println("chain rule time: $t1")
-    println("expressionPatternEqual time: $t2")
+    println("expression pattern match: $t2")
     println("sortperm+ time: $t3")
     
     t3 = time()

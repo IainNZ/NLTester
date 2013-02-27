@@ -68,19 +68,23 @@ function cont5_1(N)
 end
 
 
-instances = [(:clnlbeam,500), (:clnlbeam,500), (:cont5_1,200), (:cont5_1,200)]
+instances = [(:clnlbeam,500),
+    (:clnlbeam,5000),(:clnlbeam,50000),
+    (:clnlbeam,500000),
+    (:cont5_1,200),(:cont5_1,400),(:cont5_1,1000)]
 #instances = [:cont5_1]
-#instances = [:clnlbeam]
+#instances = [(:clnlbeam,500000)]
 
 
 function dobench()
-    N = 100
+    Reps = 100
 
     modeltime = Float64[]
     prepjacobian = Float64[]
     firsteval = Float64[]
     nextN = Float64[]
     for (i,N) in instances
+        gc_disable()
         f = eval(i)
 
         t = time()
@@ -100,7 +104,7 @@ function dobench()
         push!(firsteval,time()-t)
 
         t = time()
-        for k in 1:N
+        for k in 1:Reps
             elts(xval,nzval)
         end
         push!(nextN,time()-t)
@@ -113,6 +117,7 @@ function dobench()
         println("### $(string(i)), N = $N $(modeltime[end]) $(prepjacobian[end]) $(firsteval[end]) $(nextN[end]/N)")
         println("## $(string(i)), N = $N Problem has $(m.numCols) variables, $(length(cons)) constraints, and $(length(nzval)) non-zero elements")
         println("## $(string(i)), N = $N Jacobian norm: $(norm(nzval,2)) (nnz = $(length(nzval)))")
+        gc_enable()
     end
 end
 
