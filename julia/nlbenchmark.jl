@@ -83,7 +83,7 @@ function dobench()
     firsteval = Float64[]
     nextN = Float64[]
     for (i,N) in instances
-        gc_disable()
+        #gc_disable()
         f = eval(i)
 
         modelt = Inf
@@ -128,7 +128,7 @@ function dobench()
         @printf "### %s, N=%d %.6f %.6f %.6f %.6f\n" string(i) N modeltime[end] prepjacobian[end] firsteval[end] nextN[end]
         println("## $(string(i)), N = $N Problem has $(m.numCols) variables, $(length(cons)) constraints, and $(length(nzval)) non-zero elements")
         println("## $(string(i)), N = $N Jacobian norm: $(norm(nzval,2)) (nnz = $(length(nzval)))")
-        gc_enable()
+        #gc_enable()
     end
 end
 
