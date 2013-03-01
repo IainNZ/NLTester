@@ -14,7 +14,7 @@ function [] = runinstance(name,N)
 modelrep = 1;
 jacrep = 3;
 
-% take mimimum over repitions to decrease variability
+% take mimimum over repetitions to decrease variability
 buildtime = Inf;
 for k = 1:modelrep
     tic
