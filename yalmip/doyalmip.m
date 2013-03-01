@@ -2,16 +2,21 @@
 function [] = doyalmip()
 
 runinstance('clnlbeam',500);
+runinstance('cont5_1',100);
 runinstance('clnlbeam',5000);
-
+runinstance('cont5_1',200);
 
 
 end
 
 function [] = runinstance(name,N)
 
+modelrep = 1;
+jacrep = 3;
+
+% take mimimum over repitions to decrease variability
 buildtime = Inf;
-for k = 1:3
+for k = 1:modelrep
     tic
     model = eval(sprintf('%s(%d)',name,N));
     model = yalmip2nonlinearsolver(model);
@@ -21,7 +26,7 @@ end
 x = ones(length(model.linearindicies),1);
 
 jactime = Inf;
-for k = 1:3
+for k = 1:jacrep
     tic
     jac = ipopt_callback_dg(x,model);
     jactime = min(toc,jactime);
