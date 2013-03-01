@@ -1,4 +1,5 @@
 NLTester
 ========
 
-Temporary repo for testing AMPL NL interface
+Code for benchmarks comparing AMPL, Julia, and YALMIP (MATLAB) for nonlinear modeling.
+
