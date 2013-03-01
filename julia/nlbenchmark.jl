@@ -72,7 +72,7 @@ instances = [
     (:clnlbeam,5000),(:clnlbeam,50000),
     (:clnlbeam,500000),
     (:cont5_1,200),(:cont5_1,400),(:cont5_1,1000)]
-#instances = [:cont5_1]
+#instances = [(:cont5_1,100)]
 #instances = [(:clnlbeam,500000)]
 
 
@@ -126,8 +126,8 @@ function dobench()
         #end
 
         @printf "### %s, N=%d %.6f %.6f %.6f %.6f\n" string(i) N modeltime[end] prepjacobian[end] firsteval[end] nextN[end]
-        println("## $(string(i)), N = $N Problem has $(m.numCols) variables, $(length(cons)) constraints, and $(length(nzval)) non-zero elements")
-        println("## $(string(i)), N = $N Jacobian norm: $(norm(nzval,2)) (nnz = $(length(nzval)))")
+        println("## $(string(i)), N=$N Problem has $(m.numCols) variables, $(length(cons)) constraints, and $(length(nzval)) non-zero elements")
+        println("## $(string(i)), N=$N Jacobian norm: $(norm(nzval,2)) (nnz = $(length(nzval)))")
         #gc_enable()
     end
 end
