@@ -12,7 +12,7 @@ u = sdpvar(ni+1,1);
 C = [x(2:ni+1)-x(1:ni) - (0.5*h)*(sin(t(2:ni+1))+sin(t(1:ni))) == 0];
 
 % cons2
-C = [C, t(2:ni+1)-t(1:ni) - (0.5*h)*u(2:ni+1)-(0.5*h)*u(1:ni)];
+C = [C, t(2:ni+1)-t(1:ni) - (0.5*h)*u(2:ni+1)-(0.5*h)*u(1:ni) == 0];
 
 % dummy objective
 obj = t(1);
