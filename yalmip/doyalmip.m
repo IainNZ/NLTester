@@ -1,10 +1,13 @@
 
 function [] = doyalmip()
 
-runinstance('clnlbeam',500);
-runinstance('cont5_1',100);
-runinstance('clnlbeam',5000);
+
 runinstance('cont5_1',200);
+runinstance('cont5_1',400);
+runinstance('cont5_1',1000);
+runinstance('clnlbeam',5000);
+runinstance('clnlbeam',50000);
+runinstance('clnlbeam',500000);
 
 
 end
