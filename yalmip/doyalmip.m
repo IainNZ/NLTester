@@ -24,25 +24,24 @@ for k = 1:modelrep
     tic
     model = eval(sprintf('%s(%d)',name,N));
     model = yalmip2nonlinearsolver(model);
+    % include one call to jacobian
+    x = ones(length(model.linearindicies),1);
+    jac = ipopt_callback_dg(x,model);
     buildtime = min(toc,buildtime);
 end
 
-x = ones(length(model.linearindicies),1);
-
-tic
-jac = ipopt_callback_dg(x,model);
-jactime1 = toc;
-
 n = norm(jac(:));
+
 
 jactime2 = Inf;
 for k = 1:jacrep
+    % change x because there's code to check for repeat calls
     x = rand(length(model.linearindicies),1);
     tic
     jac = ipopt_callback_dg(x,model);
     jactime2 = min(toc,jactime2);
 end
-disp(['### ',name,',',num2str(N),' ',num2str(buildtime), ' ',num2str(jactime1),' ',num2str(jactime2)])
+disp(['### ',name,',',num2str(N),' ',num2str(buildtime),' ',num2str(jactime2)])
 disp(['## Jacobian norm: ',num2str(n), ' (nnz = ',num2str(nnz(jac)),')'])
 
 

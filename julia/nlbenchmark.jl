@@ -83,23 +83,22 @@ function dobench()
         f = eval(i)
 
         inittime = Inf
-        local m, cons, elts, colval, rowstarts
+        local m, cons, elts, colval, rowstarts, xval, nzval
         for k in 1:3
             t = time()
             m,cons = f(N)
             elts, colval, rowstarts = sparseJacobian(m,cons)
+            
+            # preallocate output and compute jacobian once
+            xval = ones(m.numCols)
+            nzval = Array(Float64,length(colval))
+            elts(xval,nzval)
+            
             inittime = min(time()-t,inittime)
             gc()
         end
 
-        xval = ones(m.numCols)
         
-        t = time()
-        # preallocate output
-        nzval = Array(Float64,length(colval))
-        elts(xval,nzval)
-        firstjactime = time()-t
-
         evaltime = Inf
         for k in 1:30
             t = time()
@@ -112,7 +111,7 @@ function dobench()
         #    println(join([@sprintf("%.9f*X%d", nzval[r], colval[r]) for r in rowstarts[row]:(rowstarts[row+1]-1)]," + "))
         #end
 
-        @printf "### %s, N=%d %.6f %.6f %.6f\n" string(i) N inittime firstjactime evaltime
+        @printf "### %s, N=%d %.6f %.6f\n" string(i) N inittime evaltime
         println("## Problem has $(m.numCols) variables, $(length(cons)) constraints, and $(length(nzval)) non-zero elements")
         println("## Jacobian norm: $(norm(nzval,2)) (nnz = $(length(nzval)))")
         #gc_enable()

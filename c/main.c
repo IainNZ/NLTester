@@ -44,17 +44,15 @@ int main(int argc, char **argv)
 	stub = argv[1];
 	nl = jac0dim(stub, (fint)strlen(stub));
 	fg_read(nl,0);
-	t0 = clock_now() - t0;
-
 	
 	J = (real *)Malloc(nzc*sizeof(real));
-	
+	X = (real *)Malloc(n_var*sizeof(real));
+	for (i = 0; i < n_var; i++) X[i] = 1.0;
 
-	int nvar = n_var;
+	// include one jacobian call for consistency
+	jacval(X, J, &nerror);
 
-	X = (real *)Malloc(nvar*sizeof(real));
-
-	for (i = 0; i < nvar; i++) X[i] = 1.0;
+	t0 = clock_now() - t0;
 	
 	//objVal = objval(0, X, &nerror);
 	//printf("Objective %.5f\n", objVal);
@@ -98,5 +96,6 @@ int main(int argc, char **argv)
 		}
 		printf("\n");
 	}*/
-	
+
+	return 0;
 }
