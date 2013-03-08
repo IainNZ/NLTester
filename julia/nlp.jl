@@ -53,15 +53,19 @@ genVarList(x::Number,arrname) = nothing
 genVarList(x::Symbol,arrname) = :(addToVarList($x,$arrname))
 
 
-macro nlexpr(x)
+macro NLConstr(m,x)
+    @assert x.head == :comparison
+    # ignore direction and rhs for now
+    lhs = x.args[1]
     exvars = gensym()
     varcode = quote
         $exvars = Int[]
-        $(genVarList(x,exvars))
+        $(genVarList(lhs,exvars))
         $exvars
     end
-    return :(NLExpr($(esc(processExpr(x))),$(hash(x)), $(esc(varcode))))
-end  
+    return :(push!($(esc(m)),NLExpr($(esc(processExpr(lhs))),$(hash(x)), $(esc(varcode)))))
+end
+
 
 type Placeholder
     idx::Int
