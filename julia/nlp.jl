@@ -53,7 +53,7 @@ genVarList(x::Number,arrname) = nothing
 genVarList(x::Symbol,arrname) = :(addToVarList($x,$arrname))
 
 
-macro NLConstr(m,x)
+macro addNLConstr(m,x)
     @assert x.head == :comparison
     # ignore direction and rhs for now
     lhs = x.args[1]

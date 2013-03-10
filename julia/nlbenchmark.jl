@@ -16,11 +16,11 @@ function clnlbeam(N)
     cons = Array(NLExpr,0)
     # cons1
     for i in 1:ni
-        @NLConstr(cons, x[i+1] - x[i] - (0.5h)*(sin(t[i+1])+sin(t[i])) == 0)
+        @addNLConstr(cons, x[i+1] - x[i] - (0.5h)*(sin(t[i+1])+sin(t[i])) == 0)
     end
     # cons2
     for i in 1:ni
-        @NLConstr(cons, t[i+1] - t[i] - (0.5h)*u[i+1] - (0.5h)*u[i] == 0)
+        @addNLConstr(cons, t[i+1] - t[i] - (0.5h)*u[i+1] - (0.5h)*u[i] == 0)
     end
 
     return m,cons
@@ -47,18 +47,18 @@ function cont5_1(N)
     cons = Array(NLExpr,0)
     # pde
     for i in 0:(m-1), j in 1:(n-1)
-        @NLConstr(cons, dtinv*(y[i+2,j+1] - y[i+1,j+1]) - 
+        @addNLConstr(cons, dtinv*(y[i+2,j+1] - y[i+1,j+1]) - 
             (0.5h2inv)*(y[i+1,j] - 2y[i+1,j+1] + y[i+1,j+2] + y[i+2,j] - 2y[i+2,j+1] + y[i+2,j+2]) == 0)
     end
 
     # bc1
     for i in 1:m
-        @NLConstr(cons, (0.5dxinv)*(y[i+1,3] - 4y[i+1,2] + 3y[i+1,1]) == 0)
+        @addNLConstr(cons, (0.5dxinv)*(y[i+1,3] - 4y[i+1,2] + 3y[i+1,1]) == 0)
     end
     
     # bc2
     for i in 1:m
-        @NLConstr(cons, (0.5dxinv)*(y[i+1,n-1] - 4y[i+1,n] + 3y[i+1,n+1]) +
+        @addNLConstr(cons, (0.5dxinv)*(y[i+1,n-1] - 4y[i+1,n] + 3y[i+1,n+1]) +
          y[i+1,n+1] - u[i] + y[i+1,n+1]*(y[i+1,n+1]^2)^(1.5) == 0 )
         # use y*(y^2)^(3/2) instead of y*abs(y)^3 
     end
