@@ -229,6 +229,7 @@ function sparseJacobian(m,constr::Vector{NLExpr})
     t2 = 0.
     t3 = 0.
 
+    gc_disable()
 
     for r in 1:length(constr)
         con = constr[r]
@@ -298,6 +299,8 @@ function sparseJacobian(m,constr::Vector{NLExpr})
     #println("chain rule time: $t1")
     #println("expression pattern match: $t2")
     #println("sortperm+ time: $t3")
+
+    gc_enable()
     
     t3 = time()
     fexpr = :( (__vals::Vector{Float64},out::Vector{Float64},exprsByDerivTemplate::Vector{Vector{Vector{Int}}},placeholderMaps::Vector{Vector{Vector{Int}}}) -> begin end )
