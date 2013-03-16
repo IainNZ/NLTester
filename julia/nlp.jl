@@ -12,16 +12,16 @@ function processExpr(x::Expr)
         arr = gensym()
         code = :(push!($arr,$(processExpr(x.args[2]))))
         for level in length(x.args):-1:3
-            code = expr(:for, {x.args[level],code})
+            code = Expr(:for, x.args[level],code)
             # for $(x.args[level]) $code end
         end
         code = :($arr = {:+};$code;$arr)
-        return :(expr(:call,$code))
+        return :(Expr(:call,:+,$code...))
     elseif x.head == :call
-        quoted = expr(:quote,{x.args[1]})
-        code = :(expr(:call,{$quoted}))
+        quoted = Expr(:quote,x.args[1])
+        code = :(Expr(:call,$quoted))
         for y in x.args[2:end]
-            push!(code.args[3].args,processExpr(y))
+            push!(code.args,processExpr(y))
         end
         return code
     else
@@ -39,11 +39,11 @@ function genVarList(x::Expr, arrname)
     if x.head == :curly && x.args[1] == :sum
         code = genVarList(x.args[2],arrname)
         for level in length(x.args):-1:3
-            code = expr(:for, {x.args[level],code})
+            code = Expr(:for, x.args[level],code)
         end
         return code
     elseif x.head == :call
-        return expr(:block,{ genVarList(y,arrname) for y in x.args[2:end] })
+        return Expr(:block,[genVarList(y,arrname) for y in x.args[2:end]]...)
     else
         return :(addToVarList($x,$arrname))
     end
@@ -105,7 +105,7 @@ function chainRule(ex::Expr,wrt)
         elseif (length(termdiffs) == 2)
             return termdiffs[2]
         else
-            return expr(:call,termdiffs)
+            return Expr(:call,termdiffs...)
         end
     end
     if ex.args[1] == :-
@@ -126,7 +126,7 @@ function chainRule(ex::Expr,wrt)
         elseif (term1 == 0 && length(termdiffs) == 2)
             return 0
         else
-            return expr(:call,termdiffs)
+            return Expr(:call,termdiffs...)
         end
     end
     if ex.args[1] == :*
@@ -180,7 +180,7 @@ end
 
 canonicalizeExpression(ex::Symbol,niceidx,nseen) = ex
 canonicalizeExpression(ex::Number,niceidx,nseen) = ex
-canonicalizeExpression(ex::Expr,niceidx,nseen) = expr(ex.head,{canonicalizeExpression(y,niceidx,nseen) for y in ex.args})
+canonicalizeExpression(ex::Expr,niceidx,nseen) = Expr(ex.head,[canonicalizeExpression(y,niceidx,nseen) for y in ex.args]...)
 canonicalizeExpression(ex,niceidx) = (nseen = Placeholder(0); canonicalizeExpression(ex,niceidx,nseen))
 
 
@@ -207,7 +207,7 @@ end
 preparePlaceholderExpression(ex::Placeholder,t) = :(__vals[placeholderMaps[$t][i][$(ex.idx)]])
 preparePlaceholderExpression(ex::Symbol,t) = ex
 preparePlaceholderExpression(ex::Number,t) = ex
-preparePlaceholderExpression(ex::Expr,t) = expr(ex.head,{preparePlaceholderExpression(y,t) for y in ex.args})
+preparePlaceholderExpression(ex::Expr,t) = Expr(ex.head,[preparePlaceholderExpression(y,t) for y in ex.args]...)
 
 
 
