@@ -316,6 +316,7 @@ function sparseJacobian(m,constr::Vector{NLExpr})
             push!(fexpr.args[2].args[2].args,loop)
         end
     end
+    println(fexpr)
     f = eval(fexpr)
     v = (__vals,out) -> f(__vals,out,exprsByDerivTemplate,placeholderMaps)
     t3 = time() - t3

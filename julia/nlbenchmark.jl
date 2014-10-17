@@ -1,4 +1,4 @@
-using MathProg
+using JuMP
 
 require("nlp.jl")
 
@@ -7,7 +7,7 @@ function clnlbeam(N)
     #alpha = 350
     h     = 1/ni
 
-    m = Model("min")
+    m = Model(:Min)
 
     @defVar(m, -1 <= t[1:(ni+1)] <= 1)
     @defVar(m, -0.05 <= x[1:(ni+1)] <= 0.05)
@@ -19,9 +19,9 @@ function clnlbeam(N)
         @addNLConstr(cons, x[i+1] - x[i] - (0.5h)*(sin(t[i+1])+sin(t[i])) == 0)
     end
     # cons2
-    for i in 1:ni
-        @addNLConstr(cons, t[i+1] - t[i] - (0.5h)*u[i+1] - (0.5h)*u[i] == 0)
-    end
+    #for i in 1:ni
+    #    @addNLConstr(cons, t[i+1] - t[i] - (0.5h)*u[i+1] - (0.5h)*u[i] == 0)
+    #end
 
     return m,cons
 
@@ -67,12 +67,12 @@ function cont5_1(N)
 end
 
 
-instances = [
-    (:clnlbeam,5000),(:clnlbeam,50000),
-    (:clnlbeam,500000),
-    (:cont5_1,200),(:cont5_1,400),(:cont5_1,1000)]
+#instances = [
+#    (:clnlbeam,5000),(:clnlbeam,50000),
+#    (:clnlbeam,500000),
+#    (:cont5_1,200),(:cont5_1,400),(:cont5_1,1000)]
 #instances = [(:cont5_1,100)]
-#instances = [(:clnlbeam,500000)]
+instances = [(:clnlbeam,5000)]
 
 
 function dobench()
